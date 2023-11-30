@@ -49,13 +49,13 @@ class MultiHeadAttention(nn.Module):
         self.key_dense = nn.Linear(d_model, d_model)
         self.value_dense = nn.Linear(d_model, d_model)
 
-        self.reshape = lambda x: x.view(-1, num_heads, d_model // num_heads)
+        self.reshape = lambda x: x.view(-1, self.num_heads, self.d_model // self.num_heads)
         # self.transpose = nn.Permute((2, 1, 3))
 
         # self.transpose_attn_output = nn.Permute((2, 1, 3))
         # self.transpose_attn_output = lambda x : torch.permute(x,(2, 1, 3))
         # self.reshape_attn_output = nn.Reshape((-1, d_model))
-        self.reshape_attn_output = lambda x: x.view(-1, d_model)
+        self.reshape_attn_output = lambda x: x.view(-1, self.d_model)
 
         self.out = nn.Linear(d_model, d_model)
 
@@ -64,9 +64,18 @@ class MultiHeadAttention(nn.Module):
     def forward(self, inputs, mask):
         query, key, value = inputs
 
-        query = self.reshape(self.query_dense(query))
-        key = self.reshape(self.key_dense(key))
-        value = self.reshape(self.value_dense(value))
+        query = self.query_dense(query)
+        key = self.key_dense(key)
+        value = self.value_dense(value)
+
+        print('query shape before reshape', query.size())
+        print('key shape before reshape', key.size())
+        print('value shape before reshape', value.size())
+
+        query = self.reshape(query)
+        key = self.reshape(key)
+        value = self.reshape(value)
+
         # query = self.transpose(self.reshape(query))
         # key = self.transpose(self.reshape(key))
         # value = self.transpose(self.reshape(value))
@@ -74,9 +83,9 @@ class MultiHeadAttention(nn.Module):
         permute_tuple = (1,0,2)
         
 
-        torch.permute(query,permute_tuple)
-        torch.permute(key,permute_tuple)
-        torch.permute(value,permute_tuple)
+        query = torch.permute(query,permute_tuple)
+        key = torch.permute(key,permute_tuple)
+        value = torch.permute(value,permute_tuple)
 
         attention_output, attention_weights = self.attention([query, key, value], mask)
 
