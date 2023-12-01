@@ -12,6 +12,7 @@ class CrossAttnLayer(nn.Module):
                  x1_parameter_sharing, x1_full_attention,
                  x2_dim_k, x2_parameter_sharing, x2_full_attention, **kwargs):
         super(CrossAttnLayer, self).__init__(**kwargs)
+        self.cuda_available = torch.cuda.is_available()
 
         self.d_model = d_model
         self.cross_num_heads = cross_num_heads

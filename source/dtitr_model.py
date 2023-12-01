@@ -65,13 +65,14 @@ class DTITR(nn.Module):
 
         self.out = OutputMLP(d_model, out_mlp_depth, out_mlp_units, dense_atv_fun,
                     FLAGS.output_atv_fun, dropout_rate)
-        
+        self.cuda_available = torch.cuda.is_available()
+
     def forward(self, prot, smiles):
         prot_mask = self.prot_mask(prot) #x1
         smiles_mask = self.smiles_mask(smiles) #x2
 
-        prot_encoding = self.encode_prot(prot)
-        smiles_encoding = self.encode_smiles(smiles)
+        prot_encoding = self.encode_prot(prot).cuda() if self.cuda_available else self.encode_prot(prot)
+        smiles_encoding = self.encode_smiles(smiles).cuda() if self.cuda_available else self.encode_smiles(smiles)
 
         encoded_prot_for_cross, _ = self.encoder_prot_module(prot_encoding, prot_mask)
         encoded_smiles_for_cross, _ = self.encoder_smiles_module(smiles_encoding, smiles_mask)

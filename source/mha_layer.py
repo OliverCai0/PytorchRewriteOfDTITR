@@ -8,6 +8,7 @@ class ScaledDotProductAttention(nn.Module):
         super(ScaledDotProductAttention, self).__init__()
         self.dropout_rate = dropout_rate
         self.dropout_layer = nn.Dropout(dropout_rate)
+        self.cuda_available = torch.cuda.is_available()
 
     def forward(self, inputs, mask):
         query, key, value = inputs
