@@ -13,6 +13,7 @@ class EmbeddingLayer(nn.Module):
 
         self.emb_layer = nn.Embedding(voc_size, d_model)
         self.dropout_layer = nn.Dropout(dropout_rate)
+        self.cuda_available = torch.cuda.is_available()
 
     def position_embedding(self, max_len):
         # """
@@ -83,7 +84,8 @@ class EmbeddingLayer(nn.Module):
         output = self.emb_layer(sequences) * torch.sqrt(torch.tensor(self.d_model, dtype=torch.float32))
 
         if self.positional_enc:  # Add Positional Info
-            output = output + torch.tensor(self.position_embedding(max_len).numpy())
+            extra = torch.tensor(self.position_embedding(max_len).numpy())
+            output = output + (extra.cuda() if self.cuda_available  else extra)
             output = self.dropout_layer(output)
 
         return output
