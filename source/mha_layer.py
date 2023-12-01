@@ -49,13 +49,13 @@ class MultiHeadAttention(nn.Module):
         self.key_dense = nn.Linear(d_model, d_model)
         self.value_dense = nn.Linear(d_model, d_model)
 
-        self.reshape = lambda x: x.view(-1, self.num_heads, self.d_model // self.num_heads)
+        self.reshape = lambda x: x.view(x.size()[0], -1, self.num_heads, self.d_model // self.num_heads)
         # self.transpose = nn.Permute((2, 1, 3))
 
         # self.transpose_attn_output = nn.Permute((2, 1, 3))
         # self.transpose_attn_output = lambda x : torch.permute(x,(2, 1, 3))
         # self.reshape_attn_output = nn.Reshape((-1, d_model))
-        self.reshape_attn_output = lambda x: x.view(-1, self.d_model)
+        self.reshape_attn_output = lambda x: x.view(x.size()[0], -1, self.d_model)
 
         self.out = nn.Linear(d_model, d_model)
 
@@ -80,7 +80,7 @@ class MultiHeadAttention(nn.Module):
         # key = self.transpose(self.reshape(key))
         # value = self.transpose(self.reshape(value))
 
-        permute_tuple = (1,0,2)
+        permute_tuple = (0, 2,1,3)
         
 
         query = torch.permute(query,permute_tuple)

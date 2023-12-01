@@ -163,3 +163,4 @@ cython_debug/
 # Max
 *DS_Store
 source/logs/*
+.vscode

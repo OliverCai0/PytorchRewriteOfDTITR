@@ -76,7 +76,7 @@ class DTITR(nn.Module):
 
         encoded_prot_for_cross, _ = self.encoder_prot_module(prot_encoding, x1_mask)
         encoded_smiles_for_cross, _ = self.encoder_smiles_module(smiles_encoding, x2_mask)
-        cross_prot_smiles_out, _ = self.cross_prot_smiles(encoded_prot_for_cross, encoded_smiles_for_cross, x2_mask, x1_mask)
+        cross_prot_smiles_out, _ = self.cross_prot_smiles([encoded_prot_for_cross, encoded_smiles_for_cross], x2_mask, x1_mask)
         return self.out(cross_prot_smiles_out)
 
 
