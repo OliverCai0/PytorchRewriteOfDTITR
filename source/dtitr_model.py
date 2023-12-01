@@ -68,15 +68,15 @@ class DTITR(nn.Module):
                     FLAGS.output_atv_fun, dropout_rate)
         
     def forward(self, prot, smiles):
-        x1_mask = self.prot_mask(prot) #x1
-        x2_mask = self.smiles_mask(smiles) #x2
+        prot_mask = self.prot_mask(prot) #x1
+        smiles_mask = self.smiles_mask(smiles) #x2
 
         prot_encoding = self.encode_prot(prot)
         smiles_encoding = self.encode_smiles(smiles)
 
-        encoded_prot_for_cross, _ = self.encoder_prot_module(prot_encoding, x1_mask)
-        encoded_smiles_for_cross, _ = self.encoder_smiles_module(smiles_encoding, x2_mask)
-        cross_prot_smiles_out, _ = self.cross_prot_smiles([encoded_prot_for_cross, encoded_smiles_for_cross], x2_mask, x1_mask)
+        encoded_prot_for_cross, _ = self.encoder_prot_module(prot_encoding, prot_mask)
+        encoded_smiles_for_cross, _ = self.encoder_smiles_module(smiles_encoding, smiles_mask)
+        cross_prot_smiles_out, _ = self.cross_prot_smiles([encoded_prot_for_cross, encoded_smiles_for_cross], smiles_mask, prot_mask)
         return self.out(cross_prot_smiles_out)
 
 

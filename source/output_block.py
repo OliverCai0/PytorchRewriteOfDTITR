@@ -23,7 +23,7 @@ class OutputMLP(nn.Module):
         self.out_atv_fun = out_atv_fun
         self.dropout_rate = dropout_rate
 
-        self.concatenate_layer = nn.Linear(mlp_units[0] * 2, mlp_units[0])
+        # self.concatenate_layer = nn.Linear(mlp_units[0] * 2, mlp_units[0])
         self.output_dense = nn.Linear(mlp_units[-1], 1)
 
         layers = []
@@ -56,7 +56,7 @@ class OutputMLP(nn.Module):
 
         concat_input = torch.cat([prot_input, smiles_input], dim=1)
 
-        concat_input = self.concatenate_layer(concat_input)
+        # concat_input = self.concatenate_layer(concat_input)
         concat_input = self.mlp_head(concat_input)
 
         out = self.output_dense(concat_input)
