@@ -61,13 +61,14 @@ class MultiHeadAttention(nn.Module):
         self.out = nn.Linear(d_model, d_model)
 
         self.dropout_layer = nn.Dropout(dropout_rate)
+        self.cuda_available = torch.cuda.is_available()
 
     def forward(self, inputs, mask):
         query, key, value = inputs
 
-        query = self.query_dense(query)
-        key = self.key_dense(key)
-        value = self.value_dense(value)
+        query = self.query_dense(query.cuda()).cuda() if  self.cuda_available else self.query_dense(query) 
+        key = self.key_dense(key.cuda()).cuda() if self.cuda_available else self.key_dense(key)
+        value = self.value_dense(value.cuda()).cuda() if self.cuda_available else self.value_dense(value)
 
         # print('query shape before reshape', query.size())
         # print('key shape before reshape', key.size())
