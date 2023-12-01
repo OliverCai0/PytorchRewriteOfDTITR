@@ -19,7 +19,6 @@ from dataset_builder_util import dataset_builder
 from argument_parser import argparser, logging
 import time
 import tensorflow as tf
-import numpy as np
 
 
 class DTITR(nn.Module):
@@ -64,7 +63,7 @@ class DTITR(nn.Module):
                                           FLAGS.return_intermediate
         )
 
-        self.out = OutputMLP(out_mlp_depth, out_mlp_units, dense_atv_fun,
+        self.out = OutputMLP(d_model, out_mlp_depth, out_mlp_units, dense_atv_fun,
                     FLAGS.output_atv_fun, dropout_rate)
         
     def forward(self, prot, smiles):
@@ -110,6 +109,7 @@ def run_train_model(FLAGS):
     # print("Converting kd values to torch")
     # kd_values = torch.tensor(kd_values)
     # print("Done")
+    CUDA_AVAILABLE = torch.cuda.is_available()
 
     if FLAGS.bpe_option[0] == True:
         protein_data = add_reg_token(protein_data, FLAGS.protein_dict_bpe_len)
@@ -153,6 +153,9 @@ def run_train_model(FLAGS):
                                     FLAGS.prot_ff_dim[0], FLAGS.smiles_ff_dim[0], FLAGS.d_model[0],
                                     FLAGS.dropout_rate[0], FLAGS.dense_atv_fun[0],
                                     FLAGS.out_mlp_depth[0], FLAGS.out_mlp_hdim[0])
+    if CUDA_AVAILABLE:
+        dtitr_model = dtitr_model.cuda()
+
     print('successful')
 
     if FLAGS.optimizer_fn[0] == 'radam':
@@ -174,31 +177,25 @@ def run_train_model(FLAGS):
     
 
     criterion = nn.MSELoss()
-    print("data loader")
-    print("Converting protein data to pytorch")
     prot_train = convert_tf_tensor_to_pytorch(prot_train)
-    print("Converting smiles data to pytorch")
     smiles_train = convert_tf_tensor_to_pytorch(smiles_train)
-    print("Converting kd values to torch")
     kd_train = convert_tf_tensor_to_pytorch(kd_train)
-    print("Done")
 
     data_loader = DataLoader(list(zip(prot_train, smiles_train, kd_train)), shuffle=True, batch_size=FLAGS.batch_dim[0])
     print("Finished")
     dtitr_model.train()
     for epoch in range(FLAGS.num_epochs[0]):
-        print("Epoch started")
         for _, (prot_batch, smiles_batch, kd_batch) in enumerate(data_loader):
-            model_outputs = dtitr_model(prot_batch, smiles_batch)
-            loss = criterion(model_outputs, kd_batch)
+            model_outputs = dtitr_model(prot_batch.cuda(), smiles_batch.cuda()) if CUDA_AVAILABLE else dtitr_model(prot_batch, smiles_batch)
+            loss = criterion(model_outputs.squeeze(dim=1), kd_batch.cuda()) if CUDA_AVAILABLE else criterion(model_outputs.squeeze(dim=1), kd_batch)
             optimizer_fun.zero_grad()
             loss.backward()
             optimizer_fun.step()
         
         dtitr_model.eval()
         with torch.no_grad():
-            test_output = dtitr_model(prot_test, smiles_test)
-            test_loss = criterion(test_output, kd_test)
+            test_output = dtitr_model(prot_test.cuda(), smiles_test.cuda()) if CUDA_AVAILABLE else dtitr_model(prot_test, smiles_test)
+            test_loss = criterion(test_output.cuda(), kd_test.cuda()) if CUDA_AVAILABLE else criterion(test_output, kd_test) 
             print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {test_loss}')
         dtitr_model.train()
         if test_loss <= 0.001:

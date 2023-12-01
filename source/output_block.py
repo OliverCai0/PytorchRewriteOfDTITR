@@ -14,9 +14,10 @@ class OutputMLP(nn.Module):
 
 
     """
-    def __init__(self, mlp_depth, mlp_units, atv_fun, out_atv_fun, dropout_rate, **kwargs):
+    def __init__(self, d_model, mlp_depth, mlp_units, atv_fun, out_atv_fun, dropout_rate, **kwargs):
         super(OutputMLP, self).__init__(**kwargs)
 
+        self.d_model = d_model
         self.mlp_depth = mlp_depth
         self.mlp_units = mlp_units
         self.atv_fun = atv_fun
@@ -28,9 +29,15 @@ class OutputMLP(nn.Module):
 
         layers = []
         for i in range(mlp_depth - 1):
-            layers.append(nn.Linear(mlp_units[i], mlp_units[i+1]))
+            if i == 0:
+                layers.append(nn.Linear(self.d_model * 2, mlp_units[i+1]))
+            else:
+                layers.append(nn.Linear(mlp_units[i], mlp_units[i+1]))
+            if self.atv_fun == 'gelu':
+                layers.append(nn.GELU())
+            else:
+                layers.append(nn.ReLU())
             layers.append(nn.Dropout(dropout_rate))
-            layers.append(nn.ReLU())
         self.mlp_head = nn.Sequential(*layers)
 
     def forward(self, inputs):

@@ -75,14 +75,14 @@ class CrossAttnLayer(nn.Module):
         attn_x21_out, attn_x21_w = self.mha_layer_2([x12_qkv[:,0,:].unsqueeze(1), x21_qkv, x21_qkv], mask_x21)
 
         x1_p_t_cross = self.ln_1(x1_p_t + attn_x12_out)
-        print(f'Debug x1_p_t_cross: {x1_p_t_cross.size()}, x1_p_t: {x1_p_t.size()}, attn_x12_out: {attn_x12_out.size()}')
+        #print(f'Debug x1_p_t_cross: {x1_p_t_cross.size()}, x1_p_t: {x1_p_t.size()}, attn_x12_out: {attn_x12_out.size()}')
         x2_p_t_cross = self.ln_2(x2_p_t + attn_x21_out)
 
         x1_cross = torch.cat([x1_p_t_cross, x1_t], dim=1)
         x2_cross = torch.cat([x2_p_t_cross, x2_t], dim=1)
 
         if self.x1_full_attention:
-            print(f'Debug mask_21: {mask_x21.size()}, mask_12: {mask_x12.size()}')
+            #print(f'Debug mask_21: {mask_x21.size()}, mask_12: {mask_x12.size()}')
             attn_x1_out, attn_x1_w = self.mha_layer_3([x1_cross, x1_cross, x1_cross], mask_x21)
         else:
             attn_x1_out, attn_x1_w = self.mha_layer_3([x1_cross, x1_cross, x1_cross], mask_x21)

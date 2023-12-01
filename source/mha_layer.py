@@ -11,9 +11,9 @@ class ScaledDotProductAttention(nn.Module):
 
     def forward(self, inputs, mask):
         query, key, value = inputs
-        print('query shape', query.size())
-        print('key shape', key.size())
-        print('value shape', value.size())
+        # print('query shape', query.size())
+        # print('key shape', key.size())
+        # print('value shape', value.size())
 
         dim_k = key.size(-1)
         scale = 1 / torch.sqrt(torch.tensor(dim_k, dtype=torch.float32))
@@ -22,8 +22,8 @@ class ScaledDotProductAttention(nn.Module):
         scaled_attention_scores = matmul_q_transp_k * scale
 
         if mask is not None:
-            print(mask.size())
-            print(scaled_attention_scores.size())
+            # print(mask.size())
+            # print(scaled_attention_scores.size())
             scaled_attention_scores += (mask * -1e9)
 
         attention_weights = F.softmax(scaled_attention_scores, dim=-1)
@@ -68,9 +68,9 @@ class MultiHeadAttention(nn.Module):
         key = self.key_dense(key)
         value = self.value_dense(value)
 
-        print('query shape before reshape', query.size())
-        print('key shape before reshape', key.size())
-        print('value shape before reshape', value.size())
+        # print('query shape before reshape', query.size())
+        # print('key shape before reshape', key.size())
+        # print('value shape before reshape', value.size())
 
         query = self.reshape(query)
         key = self.reshape(key)
