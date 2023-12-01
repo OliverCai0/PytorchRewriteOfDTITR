@@ -68,8 +68,8 @@ class DTITR(nn.Module):
         self.cuda_available = torch.cuda.is_available()
 
     def forward(self, prot, smiles):
-        prot_mask = self.prot_mask(prot) #x1
-        smiles_mask = self.smiles_mask(smiles) #x2
+        prot_mask = self.prot_mask(prot.cuda()).cuda() if self.cuda_available  else  self.prot_mask(prot)#x1
+        smiles_mask = self.smiles_mask(smiles.cuda()).cuda() if self.cuda_available  else self.smiles_mask(smiles)#x2
 
         prot_encoding = self.encode_prot(prot).cuda() if self.cuda_available else self.encode_prot(prot)
         smiles_encoding = self.encode_smiles(smiles).cuda() if self.cuda_available else self.encode_smiles(smiles)
