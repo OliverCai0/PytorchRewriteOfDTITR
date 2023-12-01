@@ -54,33 +54,34 @@ class CrossAttnLayer(nn.Module):
 
         self.poswiseff_layer_1 = PosWiseFF(self.d_model, self.x1_d_ff, self.atv_fun, self.dropout_rate)
         self.poswiseff_layer_2 = PosWiseFF(self.d_model, self.x2_d_ff, self.atv_fun, self.dropout_rate)
+        self.cuda_available = torch.cuda.is_available()
 
     def rearrange_qkv(self, input1, input2):
-        input1_pred_token = input1[:, 0, :].unsqueeze(1)
-        input1_tokens = input1[:, 1:, :]
-        input2_pred_token = input2[:, 0, :].unsqueeze(1)
-        input2_tokens = input2[:, 1:, :]
+        input1_pred_token = input1[:, 0, :].unsqueeze(1).cuda() if self.cuda_available else input1[:, 0, :].unsqueeze(1)
+        input1_tokens = input1[:, 1:, :].cuda() if self.cuda_available else input1[:, 1:, :]
+        input2_pred_token = input2[:, 0, :].unsqueeze(1).cuda() if self.cuda_available  else input2[:, 0, :].unsqueeze(1)
+        input2_tokens = input2[:, 1:, :].cuda() if self.cuda_available else input2[:, 1:, :]
 
         return input1_pred_token, input1_tokens, input2_pred_token, input2_tokens
 
     def forward(self, inputs,  mask_x12, mask_x21):
         x1_p_t, x1_t, x2_p_t, x2_t = self.rearrange_qkv(inputs[0], inputs[1])
 
-        x12_qkv = torch.cat([x1_p_t, x2_t], dim=1)
-        x21_qkv = torch.cat([x2_p_t, x1_t], dim=1)
+        x12_qkv = torch.cat([x1_p_t, x2_t], dim=1).cuda() if self.cuda_available else torch.cat([x1_p_t, x2_t], dim=1)
+        x21_qkv = torch.cat([x2_p_t, x1_t], dim=1).cuda() if self.cuda_available else torch.cat([x2_p_t, x1_t], dim=1)
 
 
         # print(f'DEBUG: x12_qkv {x12_qkv.size()}, expanded: {x12_qkv[:,0,:].size()}')
         # exit()
-        attn_x12_out, attn_x12_w = self.mha_layer_1([ x12_qkv[:,0,:].unsqueeze(1), x12_qkv, x12_qkv], mask_x12)
-        attn_x21_out, attn_x21_w = self.mha_layer_2([x12_qkv[:,0,:].unsqueeze(1), x21_qkv, x21_qkv], mask_x21)
+        attn_x12_out, attn_x12_w = self.mha_layer_1([ x12_qkv[:,0,:].unsqueeze(1).cuda() if self.cuda_available else x12_qkv[:,0,:].unsqueeze(1), x12_qkv, x12_qkv], mask_x12)
+        attn_x21_out, attn_x21_w = self.mha_layer_2([x12_qkv[:,0,:].unsqueeze(1).cuda() if self.cuda_available else x12_qkv[:,0,:].unsqueeze(1), x21_qkv, x21_qkv], mask_x21)
 
         x1_p_t_cross = self.ln_1(x1_p_t + attn_x12_out)
         #print(f'Debug x1_p_t_cross: {x1_p_t_cross.size()}, x1_p_t: {x1_p_t.size()}, attn_x12_out: {attn_x12_out.size()}')
         x2_p_t_cross = self.ln_2(x2_p_t + attn_x21_out)
 
-        x1_cross = torch.cat([x1_p_t_cross, x1_t], dim=1)
-        x2_cross = torch.cat([x2_p_t_cross, x2_t], dim=1)
+        x1_cross = torch.cat([x1_p_t_cross, x1_t], dim=1).cuda() if self.cuda_available else torch.cat([x1_p_t_cross, x1_t], dim=1)
+        x2_cross = torch.cat([x2_p_t_cross, x2_t], dim=1).cuda() if self.cuda_available else torch.cat([x2_p_t_cross, x2_t], dim=1)
 
         if self.x1_full_attention:
             #print(f'Debug mask_21: {mask_x21.size()}, mask_12: {mask_x12.size()}')
