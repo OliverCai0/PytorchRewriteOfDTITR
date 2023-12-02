@@ -183,7 +183,7 @@ def run_train_model(FLAGS):
     smiles_train = convert_tf_tensor_to_pytorch(smiles_train)
     kd_train = convert_tf_tensor_to_pytorch(kd_train)
 
-    data_loader = DataLoader(list(zip(prot_train, smiles_train, kd_train)), shuffle=True, batch_size=FLAGS.batch_dim[0])
+    data_loader = DataLoader(list(zip(prot_train, smiles_train, kd_train)), batch_size=FLAGS.batch_dim[0])
     print("Finished")
     dtitr_model.train()
     for epoch in range(FLAGS.num_epochs[0]):
