@@ -190,7 +190,6 @@ def run_train_model(FLAGS):
                                     FLAGS.prot_ff_dim[0], FLAGS.smiles_ff_dim[0], FLAGS.d_model[0],
                                     FLAGS.dropout_rate[0], FLAGS.dense_atv_fun[0],
                                     FLAGS.out_mlp_depth[0], FLAGS.out_mlp_hdim[0])
-    dtitr_model.compile()
     
     # if CUDA_AVAILABLE: dtitr_model = torch.compile(dtitr_model)
 
