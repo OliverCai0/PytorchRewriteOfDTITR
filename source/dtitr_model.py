@@ -214,7 +214,7 @@ def run_train_model(FLAGS):
 
     if FLAGS.hugging_save:
         MODELPATH = os.path.join(os.getcwd(), f'../pytorchmodel/{FLAGS.hugging_save}.pth')
-        torch.save(dtitr_model, MODELPATH)
+        torch.save(dtitr_model.state_dict(), MODELPATH)
         api = HfApi()
         api.upload_file(
             path_or_fileobj= MODELPATH,  
