@@ -54,6 +54,7 @@ def c_index(y_true, y_pred):
 
     return result.item()
 
+@torch.compile
 class DTITR(nn.Module):
     def __init__(self, FLAGS, prot_trans_depth, smiles_trans_depth, cross_attn_depth,
                       prot_trans_heads, smiles_trans_heads, cross_attn_heads,
@@ -193,7 +194,7 @@ def run_train_model(FLAGS):
                                     FLAGS.dropout_rate[0], FLAGS.dense_atv_fun[0],
                                     FLAGS.out_mlp_depth[0], FLAGS.out_mlp_hdim[0])
     
-    if CUDA_AVAILABLE: dtitr_model = torch.compile(dtitr_model)
+    # if CUDA_AVAILABLE: dtitr_model = torch.compile(dtitr_model)
 
     if FLAGS.optimizer_fn[0] == 'radam':
         optimizer_fun = torch.optim.RAdam(dtitr_model.parameters(),lr=float(FLAGS.optimizer_fn[1]),
