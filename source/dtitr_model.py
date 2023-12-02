@@ -222,7 +222,7 @@ def run_train_model(FLAGS):
 
     wandb.watch(
         models = dtitr_model,
-        criterion=criterion,
+        criterion=torch.nn.functional.mse_loss,
         log='all',
         log_freq=100,
     )
