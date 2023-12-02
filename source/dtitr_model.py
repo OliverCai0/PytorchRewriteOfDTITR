@@ -186,6 +186,7 @@ def run_train_model(FLAGS):
     kd_test = convert_tf_tensor_to_pytorch(kd_test)
 
     data_loader = DataLoader(list(zip(prot_train, smiles_train, kd_train)), batch_size=FLAGS.batch_dim[0])
+    test_loader = DataLoader(list(zip(prot_test, smiles_test, kd_test)), batch_size=FLAGS.batch_dim[0])
     dtitr_model.train()
     for epoch in range(FLAGS.num_epochs[0]):
         for _, (prot_batch, smiles_batch, kd_batch) in enumerate(data_loader):
@@ -197,9 +198,14 @@ def run_train_model(FLAGS):
         
         dtitr_model.eval()
         with torch.no_grad():
-            test_output = dtitr_model(prot_test, smiles_test)
-            test_loss = criterion(test_output, kd_test) 
-            print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {test_loss}')
+            total_loss = 0
+            total_evals = 0
+            for _, (prot_test_batch, smiles_test_batch, kd_test_batch) in enumerate(test_loader):
+                test_output = dtitr_model(prot_test_batch, smiles_test_batch)
+                test_loss = criterion(test_output, kd_test_batch) 
+                total_loss += test_loss
+                total_evals += 1
+            print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {total_loss / total_evals}')
         dtitr_model.train()
         if test_loss <= 0.001:
             break
