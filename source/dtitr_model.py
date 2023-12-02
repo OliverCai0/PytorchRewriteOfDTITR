@@ -20,6 +20,7 @@ from argument_parser import argparser, logging
 import time
 import tensorflow as tf
 import wandb
+import torch._dynamo
 
 def RMSELoss(yhat,y):
     return torch.sqrt(torch.mean((yhat-y)**2))
@@ -118,6 +119,7 @@ def convert_tf_tensor_to_pytorch(tf_tensor):
 
 
 def run_train_model(FLAGS):
+    torch._dynamo.config.suppress_errors = True
     """
     Run Train function
 
