@@ -66,9 +66,9 @@ class MultiHeadAttention(nn.Module):
     def forward(self, inputs, mask):
         query, key, value = inputs
 
-        query = self.query_dense(query.cuda()).cuda() if  self.cuda_available else self.query_dense(query) 
-        key = self.key_dense(key.cuda()).cuda() if self.cuda_available else self.key_dense(key)
-        value = self.value_dense(value.cuda()).cuda() if self.cuda_available else self.value_dense(value)
+        query = self.query_dense(query) 
+        key = self.key_dense(key)
+        value = self.value_dense(value)
 
         # print('query shape before reshape', query.size())
         # print('key shape before reshape', key.size())

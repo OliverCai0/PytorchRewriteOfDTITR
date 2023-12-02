@@ -85,7 +85,7 @@ class EmbeddingLayer(nn.Module):
 
         if self.positional_enc:  # Add Positional Info
             extra = torch.tensor(self.position_embedding(max_len).numpy())
-            output = output + (extra.cuda() if self.cuda_available  else extra)
+            output = output + extra
             output = self.dropout_layer(output)
 
         return output

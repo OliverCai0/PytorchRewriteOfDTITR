@@ -68,11 +68,11 @@ class DTITR(nn.Module):
         self.cuda_available = torch.cuda.is_available()
 
     def forward(self, prot, smiles):
-        prot_mask = self.prot_mask(prot.cuda()).cuda() if self.cuda_available  else  self.prot_mask(prot)#x1
-        smiles_mask = self.smiles_mask(smiles.cuda()).cuda() if self.cuda_available  else self.smiles_mask(smiles)#x2
+        prot_mask = self.prot_mask(prot)#x1
+        smiles_mask = self.smiles_mask(smiles)#x2
 
-        prot_encoding = self.encode_prot(prot).cuda() if self.cuda_available else self.encode_prot(prot)
-        smiles_encoding = self.encode_smiles(smiles).cuda() if self.cuda_available else self.encode_smiles(smiles)
+        prot_encoding = self.encode_prot(prot)
+        smiles_encoding = self.encode_smiles(smiles)
 
         encoded_prot_for_cross, _ = self.encoder_prot_module(prot_encoding, prot_mask)
         encoded_smiles_for_cross, _ = self.encoder_smiles_module(smiles_encoding, smiles_mask)
@@ -93,7 +93,9 @@ def run_train_model(FLAGS):
     - FLAGS: arguments object
 
     """
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    CUDA_AVAILABLE = torch.cuda.is_available()
+    if CUDA_AVAILABLE:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     protein_data, smiles_data, kd_values = dataset_builder(FLAGS.data_path).transform_dataset(FLAGS.bpe_option[0],
                                                                                               FLAGS.bpe_option[1],
@@ -111,7 +113,6 @@ def run_train_model(FLAGS):
     # print("Converting kd values to torch")
     # kd_values = torch.tensor(kd_values)
     # print("Done")
-    CUDA_AVAILABLE = torch.cuda.is_available()
 
     if FLAGS.bpe_option[0] == True:
         protein_data = add_reg_token(protein_data, FLAGS.protein_dict_bpe_len)
@@ -155,8 +156,6 @@ def run_train_model(FLAGS):
                                     FLAGS.prot_ff_dim[0], FLAGS.smiles_ff_dim[0], FLAGS.d_model[0],
                                     FLAGS.dropout_rate[0], FLAGS.dense_atv_fun[0],
                                     FLAGS.out_mlp_depth[0], FLAGS.out_mlp_hdim[0])
-    if CUDA_AVAILABLE:
-        dtitr_model = dtitr_model.cuda()
 
     print('successful')
 
@@ -188,16 +187,16 @@ def run_train_model(FLAGS):
     dtitr_model.train()
     for epoch in range(FLAGS.num_epochs[0]):
         for _, (prot_batch, smiles_batch, kd_batch) in enumerate(data_loader):
-            model_outputs = dtitr_model(prot_batch.cuda(), smiles_batch.cuda()) if CUDA_AVAILABLE else dtitr_model(prot_batch, smiles_batch)
-            loss = criterion(model_outputs.squeeze(dim=1), kd_batch.cuda()) if CUDA_AVAILABLE else criterion(model_outputs.squeeze(dim=1), kd_batch)
+            model_outputs = dtitr_model(prot_batch, smiles_batch)
+            loss = criterion(model_outputs.squeeze(dim=1), kd_batch)
             optimizer_fun.zero_grad()
             loss.backward()
             optimizer_fun.step()
         
         dtitr_model.eval()
         with torch.no_grad():
-            test_output = dtitr_model(prot_test.cuda(), smiles_test.cuda()) if CUDA_AVAILABLE else dtitr_model(prot_test, smiles_test)
-            test_loss = criterion(test_output.cuda(), kd_test.cuda()) if CUDA_AVAILABLE else criterion(test_output, kd_test) 
+            test_output = dtitr_model(prot_test, smiles_test)
+            test_loss = criterion(test_output, kd_test) 
             print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {test_loss}')
         dtitr_model.train()
         if test_loss <= 0.001:
