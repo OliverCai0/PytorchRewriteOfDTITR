@@ -229,6 +229,7 @@ def run_train_model(FLAGS):
 
     dtitr_model.train()
     for epoch in range(FLAGS.num_epochs[0]):
+        start_time = time.time()
         for _, (prot_batch, smiles_batch, kd_batch) in enumerate(data_loader):
             model_outputs = dtitr_model(prot_batch, smiles_batch)
             loss = criterion(model_outputs.squeeze(dim=1), kd_batch)
@@ -236,6 +237,9 @@ def run_train_model(FLAGS):
             loss.backward()
             optimizer_fun.step()
         
+        wandb.log(
+            {"epoch_time": time.time() - start_time}
+        )
         dtitr_model.eval()
         with torch.no_grad():
             total_loss = 0
