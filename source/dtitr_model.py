@@ -54,7 +54,6 @@ def c_index(y_true, y_pred):
 
     return result.item()
 
-@torch.compile
 class DTITR(nn.Module):
     def __init__(self, FLAGS, prot_trans_depth, smiles_trans_depth, cross_attn_depth,
                       prot_trans_heads, smiles_trans_heads, cross_attn_heads,
