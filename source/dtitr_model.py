@@ -213,16 +213,10 @@ def run_train_model(FLAGS):
     # mse, rmse, ci = dtitr_model.evaluate([prot_test, smiles_test], kd_test)
 
     if FLAGS.hugging_save:
-        dtitr_model.save('dtitr_model.h5')
-        api = HfApi()
-        api.upload_file(
-            path_or_fileobj= os.path.join(os.getcwd(), 'dtitr_model.h5'),  
-            path_in_repo=f'DTITR-{FLAGS.hugging_save}',
-            repo_id="DLSAutumn2023/DTITR_Recreation"
-        )
+        dtitr_model.push_to_hub(f'DLSAutumn2023/DTITR_Recreation/DTITR-{FLAGS.hugging_save}')
 
     # Save the model to physical drive
-    torch.save(dtitr_model, os.path.join(os.getcwd(), "../pytorchmodel/model.pth"))
+    # torch.save(dtitr_model, os.path.join(os.getcwd(), "../pytorchmodel/model.pth"))
 
 
     # logging("Test Fold - " + (" MSE = %0.3f, RMSE = %0.3f, CI = %0.3f" % (mse, rmse, ci)), FLAGS)
