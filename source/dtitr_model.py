@@ -224,7 +224,7 @@ def run_train_model(FLAGS):
         models = dtitr_model,
         criterion=torch.nn.functional.mse_loss,
         log='all',
-        log_freq=100,
+        log_freq=1,
     )
 
     dtitr_model.train()
@@ -246,7 +246,7 @@ def run_train_model(FLAGS):
                 total_loss += test_loss
                 total_evals += 1
             wandb.log(
-                {"epoch": epoch + 1, "mse_loss" : total_loss / total_evals}
+                {"mse_loss_per_epoch" : total_loss / total_evals}
             )
             print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {total_loss / total_evals}')
         dtitr_model.train()
