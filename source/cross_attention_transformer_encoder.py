@@ -98,8 +98,8 @@ class CrossAttnLayer(nn.Module):
             attn_x2_out, attn_x2_w = self.mha_layer_4([x2_cross, x2_cross, x2_cross], mask_x12)
 
 
-        x1_cross = self.ln_3(self.residual_prot(x1_cross.cpu(), attn_x1_out.cpu()).cuda())
-        x2_cross = self.ln_4(self.residual_smiles(x2_cross.cpu(), attn_x2_out.cpu()).cuda())
+        x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
+        x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
 
         x1_cross_posff_out = self.poswiseff_layer_1(x1_cross)
         x2_cross_posff_out = self.poswiseff_layer_2(x2_cross)
