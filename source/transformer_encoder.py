@@ -35,7 +35,7 @@ class EncoderLayer(nn.Module):
 
         attn_out, attn_w = self.mha_layer([x, x, x], mask=mask)
 
-        sublayer1_out = self.layernorm1(self.residual(x, attn_out))
+        sublayer1_out = self.layernorm1(self.residual(x.cuda(), attn_out.cuda()))
 
         poswiseff_out = self.poswiseff_layer(sublayer1_out)
 
