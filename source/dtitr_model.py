@@ -93,6 +93,7 @@ def run_train_model(FLAGS):
     - FLAGS: arguments object
 
     """
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     protein_data, smiles_data, kd_values = dataset_builder(FLAGS.data_path).transform_dataset(FLAGS.bpe_option[0],
                                                                                               FLAGS.bpe_option[1],
