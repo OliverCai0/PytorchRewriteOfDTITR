@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from mha_layer import MultiHeadAttention
 from lmha_layer import LMHAttention
 from layer_utils import PosWiseFF
-import admin_torch
+from pytorch_admin import as_module
 
 class CrossAttnLayer(nn.Module):
     def __init__(self, d_model, cross_num_heads, x1_num_heads, x2_num_heads,
@@ -56,8 +56,8 @@ class CrossAttnLayer(nn.Module):
         self.poswiseff_layer_1 = PosWiseFF(self.d_model, self.x1_d_ff, self.atv_fun, self.dropout_rate)
         self.poswiseff_layer_2 = PosWiseFF(self.d_model, self.x2_d_ff, self.atv_fun, self.dropout_rate)
         self.cuda_available = torch.cuda.is_available()
-        self.residual_prot = admin_torch.as_module(num_res_layers=2 * num_layers)
-        self.residual_smiles = admin_torch.as_module(num_res_layers=2 * num_layers)
+        self.residual_prot = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
+        self.residual_smiles = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
 
     def rearrange_qkv(self, input1, input2):
         input1_pred_token = input1[:, 0, :].unsqueeze(1)
