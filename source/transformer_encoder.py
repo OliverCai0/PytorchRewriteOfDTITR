@@ -4,9 +4,10 @@ import torch.nn as nn
 from layer_utils import PosWiseFF
 from mha_layer import MultiHeadAttention
 from lmha_layer import LMHAttention
+import admin_torch
 
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model, num_heads, d_ff, atv_fun, dropout_rate, dim_k, parameter_sharing, full_attention):
+    def __init__(self, d_model, num_heads, d_ff, atv_fun, dropout_rate, dim_k, parameter_sharing, full_attention, num_layers):
         super(EncoderLayer, self).__init__()
 
         self.d_model = d_model
@@ -27,13 +28,14 @@ class EncoderLayer(nn.Module):
         self.poswiseff_layer = PosWiseFF(d_model, d_ff, atv_fun, dropout_rate)
         self.layernorm1 = nn.LayerNorm(normalized_shape=d_model, eps=1e-5)
         self.layernorm2 = nn.LayerNorm(normalized_shape=d_model, eps=1e-5)
+        self.residual = admin_torch.as_module(num_res_layers=2 * num_layers)
 
     def forward(self, inputs, mask=None):
         x = inputs
 
         attn_out, attn_w = self.mha_layer([x, x, x], mask=mask)
 
-        sublayer1_out = self.layernorm1(x + attn_out)
+        sublayer1_out = self.layernorm1(self.residual(x, attn_out))
 
         poswiseff_out = self.poswiseff_layer(sublayer1_out)
 
@@ -58,7 +60,7 @@ class Encoder(nn.Module):
         self.return_intermediate = return_intermediate
 
         self.enc_layers = nn.ModuleList([
-            EncoderLayer(d_model, num_heads, d_ff, atv_fun, dropout_rate, dim_k, parameter_sharing, full_attention)
+            EncoderLayer(d_model, num_heads, d_ff, atv_fun, dropout_rate, dim_k, parameter_sharing, full_attention, num_layers)
             for _ in range(num_layers)
         ])
 

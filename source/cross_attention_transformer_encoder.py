@@ -5,12 +5,13 @@ import torch.nn.functional as F
 from mha_layer import MultiHeadAttention
 from lmha_layer import LMHAttention
 from layer_utils import PosWiseFF
+import admin_torch
 
 class CrossAttnLayer(nn.Module):
     def __init__(self, d_model, cross_num_heads, x1_num_heads, x2_num_heads,
                  x1_d_ff, x2_d_ff, atv_fun, dropout_rate, x1_dim_k,
                  x1_parameter_sharing, x1_full_attention,
-                 x2_dim_k, x2_parameter_sharing, x2_full_attention, **kwargs):
+                 x2_dim_k, x2_parameter_sharing, x2_full_attention, num_layers, **kwargs):
         super(CrossAttnLayer, self).__init__(**kwargs)
         self.cuda_available = torch.cuda.is_available()
 
@@ -55,6 +56,8 @@ class CrossAttnLayer(nn.Module):
         self.poswiseff_layer_1 = PosWiseFF(self.d_model, self.x1_d_ff, self.atv_fun, self.dropout_rate)
         self.poswiseff_layer_2 = PosWiseFF(self.d_model, self.x2_d_ff, self.atv_fun, self.dropout_rate)
         self.cuda_available = torch.cuda.is_available()
+        self.residual_prot = admin_torch.as_module(num_res_layers=2 * num_layers)
+        self.residual_smiles = admin_torch.as_module(num_res_layers=2 * num_layers)
 
     def rearrange_qkv(self, input1, input2):
         input1_pred_token = input1[:, 0, :].unsqueeze(1)
@@ -94,8 +97,9 @@ class CrossAttnLayer(nn.Module):
         else:
             attn_x2_out, attn_x2_w = self.mha_layer_4([x2_cross, x2_cross, x2_cross], mask_x12)
 
-        x1_cross = self.ln_3(x1_cross + attn_x1_out)
-        x2_cross = self.ln_4(x2_cross + attn_x2_out)
+
+        x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
+        x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
 
         x1_cross_posff_out = self.poswiseff_layer_1(x1_cross)
         x2_cross_posff_out = self.poswiseff_layer_2(x2_cross)
@@ -138,7 +142,8 @@ class CrossAttnBlock(nn.Module):
                                                  self.x1_parameter_sharing,
                                                  self.x1_full_attention, self.x2_dim_k,
                                                  self.x2_parameter_sharing,
-                                                 self.x2_full_attention)
+                                                 self.x2_full_attention,
+                                                 self.num_layers)
                                   for i in range(self.num_layers)]
         
     def forward(self, inputs, x12_mask, x21_mask):
