@@ -19,7 +19,39 @@ from dataset_builder_util import dataset_builder
 from argument_parser import argparser, logging
 import time
 import tensorflow as tf
+import wandb
 
+def RMSELoss(yhat,y):
+    return torch.sqrt(torch.mean((yhat-y)**2))
+
+def c_index(y_true, y_pred):
+    """
+    Concordance Index Function
+
+    Args:
+    - y_true: true values
+    - y_pred: predicted values
+
+    """
+
+    y_pred = torch.tensor(y_pred, requires_grad=True)
+    y_true = torch.tensor(y_true)
+
+    matrix_pred = y_pred.view(-1, 1) - y_pred
+    matrix_pred = (matrix_pred == 0.0).float() * 0.5 + (matrix_pred > 0.0).float()
+
+    matrix_true = (y_true.view(-1, 1) - y_true) > 0.0
+    matrix_true = matrix_true.float()
+
+    matrix_true_position = torch.nonzero(matrix_true)
+
+    matrix_pred_values = matrix_pred[matrix_true_position[:, 0], matrix_true_position[:, 1]]
+
+    # If equal to zero then it returns zero, else return the result of the division
+    result = torch.where(matrix_pred_values.sum() == 0, torch.tensor(0.0),
+                         matrix_pred_values.sum() / matrix_true.sum())
+
+    return result.item()
 
 class DTITR(nn.Module):
     def __init__(self, FLAGS, prot_trans_depth, smiles_trans_depth, cross_attn_depth,
@@ -93,6 +125,14 @@ def run_train_model(FLAGS):
     - FLAGS: arguments object
 
     """
+    wandb.login()
+
+    flag_config = vars(FLAGS)
+    wandb.init(
+        project='PytorchDTITR',
+        config=flag_config
+    )  
+
     CUDA_AVAILABLE = torch.cuda.is_available()
     if CUDA_AVAILABLE:
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -126,15 +166,10 @@ def run_train_model(FLAGS):
 
         # kd_values = tf.expand_dims(kd_values,axis=1)
 
-    print("dataset builder get_data call")
     _, _, _, clusters, _, _, _, _ = dataset_builder(FLAGS.data_path).get_data()
-    print("finished")
     
-
-    print("train_idx")
     train_idx = pd.concat([i.iloc[:, 0] for t, i in clusters if t == 'train'])
     test_idx = [i for t, i in clusters if t == 'test'][0].iloc[:, 0]
-    print("finished")
 
     prot_train = tf.gather(protein_data, train_idx)
     prot_test = tf.gather(protein_data, test_idx)
@@ -147,7 +182,6 @@ def run_train_model(FLAGS):
 
     FLAGS.optimizer_fn = FLAGS.optimizer_fn[0]
 
-    print("trying to instantiate model")
     dtitr_model = DTITR(FLAGS, FLAGS.prot_transformer_depth[0], FLAGS.smiles_transformer_depth[0],
                                     FLAGS.cross_block_depth[0],
                                     FLAGS.prot_transformer_heads[0], FLAGS.smiles_transformer_heads[0],
@@ -156,8 +190,6 @@ def run_train_model(FLAGS):
                                     FLAGS.prot_ff_dim[0], FLAGS.smiles_ff_dim[0], FLAGS.d_model[0],
                                     FLAGS.dropout_rate[0], FLAGS.dense_atv_fun[0],
                                     FLAGS.out_mlp_depth[0], FLAGS.out_mlp_hdim[0])
-
-    print('successful')
 
     if FLAGS.optimizer_fn[0] == 'radam':
         optimizer_fun = torch.optim.RAdam(dtitr_model.parameters(),lr=float(FLAGS.optimizer_fn[1]),
@@ -187,6 +219,14 @@ def run_train_model(FLAGS):
 
     data_loader = DataLoader(list(zip(prot_train, smiles_train, kd_train)), batch_size=FLAGS.batch_dim[0])
     test_loader = DataLoader(list(zip(prot_test, smiles_test, kd_test)), batch_size=FLAGS.batch_dim[0])
+
+    wandb.watch(
+        models = dtitr_model,
+        criterion=criterion,
+        log='all',
+        log_freq=100,
+    )
+
     dtitr_model.train()
     for epoch in range(FLAGS.num_epochs[0]):
         for _, (prot_batch, smiles_batch, kd_batch) in enumerate(data_loader):
@@ -205,6 +245,9 @@ def run_train_model(FLAGS):
                 test_loss = criterion(test_output.squeeze(dim=1), kd_test_batch) 
                 total_loss += test_loss
                 total_evals += 1
+            wandb.log(
+                {"epoch": epoch + 1, "mse_loss" : total_loss / total_evals}
+            )
             print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {total_loss / total_evals}')
         dtitr_model.train()
         if test_loss <= 0.001:
@@ -218,7 +261,7 @@ def run_train_model(FLAGS):
         api = HfApi()
         api.upload_file(
             path_or_fileobj= MODELPATH,  
-            path_in_repo=f'DTITR-{FLAGS.hugging_save}',
+            path_in_repo=f'DTITR-{FLAGS.hugging_save}.pth',
             repo_id="DLSAutumn2023/DTITR_Recreation"
         )
         # dtitr_model.push_to_hub(f'DLSAutumn2023/DTITR_Recreation/DTITR-{FLAGS.hugging_save}')
