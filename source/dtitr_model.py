@@ -202,7 +202,7 @@ def run_train_model(FLAGS):
             total_evals = 0
             for _, (prot_test_batch, smiles_test_batch, kd_test_batch) in enumerate(test_loader):
                 test_output = dtitr_model(prot_test_batch, smiles_test_batch)
-                test_loss = criterion(test_output, kd_test_batch) 
+                test_loss = criterion(test_output.squeeze(dim=1), kd_test_batch) 
                 total_loss += test_loss
                 total_evals += 1
             print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {total_loss / total_evals}')
