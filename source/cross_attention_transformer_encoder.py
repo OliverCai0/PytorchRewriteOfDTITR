@@ -101,9 +101,9 @@ class CrossAttnLayer(nn.Module):
         # x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
         # x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
 
-        #Pre-Ln lol
-        x1_cross = x1_cross + self.ln_3(attn_x1_out) 
-        x2_cross = x2_cross + self.ln_4(attn_x2_out)
+        #Post-Ln lol
+        x1_cross = self.ln_3(x1_cross + attn_x1_out) 
+        x2_cross = self.ln_4(x2_cross + attn_x2_out)
 
         x1_cross_posff_out = self.poswiseff_layer_1(x1_cross)
         x2_cross_posff_out = self.poswiseff_layer_2(x2_cross)
