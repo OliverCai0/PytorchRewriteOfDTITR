@@ -262,12 +262,10 @@ def run_train_model(FLAGS):
             wandb.log(
                 {"mse_loss_per_epoch" : total_loss / total_evals}
             )
-            print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {total_loss / total_evals}')
+            print(f'Epoch {epoch + 1}/{FLAGS.num_epochs[0]}, MSE_LOSS = {total_loss / total_evals}, Grad Norm: {norm}, Time: {time.time() - start_time}')
         dtitr_model.train()
         if test_loss <= 0.001:
             break
-
-    # mse, rmse, ci = dtitr_model.evaluate([prot_test, smiles_test], kd_test)
 
     if FLAGS.hugging_save:
         MODELPATH = os.path.join(os.getcwd(), f'../pytorchmodel/{FLAGS.hugging_save}.pth')
