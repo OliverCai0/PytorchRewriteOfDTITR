@@ -56,8 +56,8 @@ class CrossAttnLayer(nn.Module):
         self.poswiseff_layer_1 = PosWiseFF(self.d_model, self.x1_d_ff, self.atv_fun, self.dropout_rate)
         self.poswiseff_layer_2 = PosWiseFF(self.d_model, self.x2_d_ff, self.atv_fun, self.dropout_rate)
         self.cuda_available = torch.cuda.is_available()
-        self.residual_prot = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
-        self.residual_smiles = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
+        # self.residual_prot = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
+        # self.residual_smiles = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
 
     def rearrange_qkv(self, input1, input2):
         input1_pred_token = input1[:, 0, :].unsqueeze(1)
@@ -98,8 +98,12 @@ class CrossAttnLayer(nn.Module):
             attn_x2_out, attn_x2_w = self.mha_layer_4([x2_cross, x2_cross, x2_cross], mask_x12)
 
 
-        x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
-        x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
+        # x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
+        # x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
+
+        #Pre-Ln lol
+        x1_cross = x1_cross + self.ln_3(attn_x1_out) 
+        x2_cross = x2_cross + self.ln_4(attn_x2_out)
 
         x1_cross_posff_out = self.poswiseff_layer_1(x1_cross)
         x2_cross_posff_out = self.poswiseff_layer_2(x2_cross)

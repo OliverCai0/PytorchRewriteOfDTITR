@@ -239,8 +239,16 @@ def run_train_model(FLAGS):
             loss.backward()
             optimizer_fun.step()
         
+        grads = [
+            param.grad.detach().flatten()
+            for param in dtitr_model.parameters()
+            if param.grad is not None
+        ]
+        norm = torch.cat(grads).norm()
+
         wandb.log(
-            {"epoch_time": time.time() - start_time}
+            {"epoch_time": time.time() - start_time,
+            "grad_norm": norm}
         )
         dtitr_model.eval()
         with torch.no_grad():

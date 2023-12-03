@@ -28,14 +28,15 @@ class EncoderLayer(nn.Module):
         self.poswiseff_layer = PosWiseFF(d_model, d_ff, atv_fun, dropout_rate)
         self.layernorm1 = nn.LayerNorm(normalized_shape=d_model, eps=1e-5)
         self.layernorm2 = nn.LayerNorm(normalized_shape=d_model, eps=1e-5)
-        self.residual = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
+        # self.residual = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
 
     def forward(self, inputs, mask=None):
         x = inputs
 
         attn_out, attn_w = self.mha_layer([x, x, x], mask=mask)
 
-        sublayer1_out = self.layernorm1(self.residual(x, attn_out))
+        # sublayer1_out = self.layernorm1(self.residual(x, attn_out))
+        sublayer1_out = x + self.layernorm1(attn_out)
 
         poswiseff_out = self.poswiseff_layer(sublayer1_out)
 
