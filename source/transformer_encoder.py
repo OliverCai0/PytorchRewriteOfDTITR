@@ -33,11 +33,13 @@ class EncoderLayer(nn.Module):
     def forward(self, inputs, mask=None):
         x = inputs
 
+        x = self.layernorm1(x)
+
         attn_out, attn_w = self.mha_layer([x, x, x], mask=mask)
 
         # sublayer1_out = self.layernorm1(self.residual(x, attn_out))
-         # Post ln
-        sublayer1_out = self.layernorm1(x + attn_out)
+         # Pre ln
+        sublayer1_out = x + attn_out
 
         poswiseff_out = self.poswiseff_layer(sublayer1_out)
 

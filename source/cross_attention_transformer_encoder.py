@@ -86,6 +86,9 @@ class CrossAttnLayer(nn.Module):
         x1_cross = torch.cat([x1_p_t_cross, x1_t], dim=1)
         x2_cross = torch.cat([x2_p_t_cross, x2_t], dim=1)
 
+        x1_cross = self.ln_3(x1_cross)
+        x2_cross = self.ln_4(x2_cross)
+
         if self.x1_full_attention:
             #print(f'Debug mask_21: {mask_x21.size()}, mask_12: {mask_x12.size()}')
             attn_x1_out, attn_x1_w = self.mha_layer_3([x1_cross, x1_cross, x1_cross], mask_x21)
@@ -101,9 +104,9 @@ class CrossAttnLayer(nn.Module):
         # x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
         # x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
 
-        #Post-Ln lol
-        x1_cross = self.ln_3(x1_cross + attn_x1_out) 
-        x2_cross = self.ln_4(x2_cross + attn_x2_out)
+        # Pre-Ln lol
+        x1_cross = x1_cross + attn_x1_out
+        x2_cross = x2_cross + attn_x2_out
 
         x1_cross_posff_out = self.poswiseff_layer_1(x1_cross)
         x2_cross_posff_out = self.poswiseff_layer_2(x2_cross)
