@@ -4,7 +4,9 @@ import torch.nn as nn
 from layer_utils import PosWiseFF
 from mha_layer import MultiHeadAttention
 from lmha_layer import LMHAttention
-from pytorch_admin import as_module
+# from pytorch_admin import as_module
+import admin_torch
+from admin_torch import as_module
 
 class EncoderLayer(nn.Module):
     def __init__(self, d_model, num_heads, d_ff, atv_fun, dropout_rate, dim_k, parameter_sharing, full_attention, num_layers):
@@ -30,14 +32,17 @@ class EncoderLayer(nn.Module):
         self.layernorm2 = nn.LayerNorm(normalized_shape=d_model, eps=1e-5)
         # self.residual = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
 
+        # Without the extra parameter
+        self.residual = as_module(num_res_layers=2 * num_layers,)
+
     def forward(self, inputs, mask=None):
         x = inputs
 
         attn_out, attn_w = self.mha_layer([x, x, x], mask=mask)
 
-        # sublayer1_out = self.layernorm1(self.residual(x, attn_out))
-         # Post ln
-        sublayer1_out = self.layernorm1(x + attn_out)
+        sublayer1_out = self.layernorm1(self.residual(x, attn_out))
+        # Post ln
+        # sublayer1_out = self.layernorm1(x + attn_out)
 
         poswiseff_out = self.poswiseff_layer(sublayer1_out)
 

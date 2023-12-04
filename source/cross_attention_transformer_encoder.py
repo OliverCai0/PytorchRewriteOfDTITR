@@ -5,7 +5,9 @@ import torch.nn.functional as F
 from mha_layer import MultiHeadAttention
 from lmha_layer import LMHAttention
 from layer_utils import PosWiseFF
-from pytorch_admin import as_module
+# from pytorch_admin import as_module
+import admin_torch
+from admin_torch import as_module
 
 class CrossAttnLayer(nn.Module):
     def __init__(self, d_model, cross_num_heads, x1_num_heads, x2_num_heads,
@@ -59,6 +61,9 @@ class CrossAttnLayer(nn.Module):
         # self.residual_prot = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
         # self.residual_smiles = as_module(num_res_layers=2 * num_layers, as_parameter=True, embed_dim=d_model)
 
+        self.residual_prot = as_module(num_res_layers=2 * num_layers)
+        self.residual_smiles = as_module(num_res_layers=2 * num_layers)
+
     def rearrange_qkv(self, input1, input2):
         input1_pred_token = input1[:, 0, :].unsqueeze(1)
         input1_tokens = input1[:, 1:, :]
@@ -97,13 +102,16 @@ class CrossAttnLayer(nn.Module):
         else:
             attn_x2_out, attn_x2_w = self.mha_layer_4([x2_cross, x2_cross, x2_cross], mask_x12)
 
+        # Enable the Admin parameterization
+        x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
+        x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
 
         # x1_cross = self.ln_3(self.residual_prot(x1_cross, attn_x1_out))
         # x2_cross = self.ln_4(self.residual_smiles(x2_cross, attn_x2_out))
 
         #Post-Ln lol
-        x1_cross = self.ln_3(x1_cross + attn_x1_out) 
-        x2_cross = self.ln_4(x2_cross + attn_x2_out)
+        # x1_cross = self.ln_3(x1_cross + attn_x1_out) 
+        # x2_cross = self.ln_4(x2_cross + attn_x2_out)
 
         x1_cross_posff_out = self.poswiseff_layer_1(x1_cross)
         x2_cross_posff_out = self.poswiseff_layer_2(x2_cross)

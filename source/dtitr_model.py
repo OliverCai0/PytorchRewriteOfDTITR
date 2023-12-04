@@ -20,6 +20,10 @@ from argument_parser import argparser, logging
 import time
 import tensorflow as tf
 import wandb
+import scipy
+import sklearn
+from sklearn import metrics
+from scipy import stats
 
 def RMSELoss(yhat,y):
     return torch.sqrt(torch.mean((yhat-y)**2))
@@ -34,8 +38,8 @@ def c_index(y_true, y_pred):
 
     """
 
-    y_pred = torch.tensor(y_pred, requires_grad=True)
-    y_true = torch.tensor(y_true)
+    y_pred = y_pred.clone().detach()
+    y_true = y_true.clone().detach()
 
     matrix_pred = y_pred.view(-1, 1) - y_pred
     matrix_pred = (matrix_pred == 0.0).float() * 0.5 + (matrix_pred > 0.0).float()
@@ -114,6 +118,98 @@ class DTITR(nn.Module):
 
 def convert_tf_tensor_to_pytorch(tf_tensor):
     return torch.tensor(tf_tensor.numpy())
+
+def evaluate_model(FLAGS):
+    """
+    Run Train function
+
+    Args:
+    - FLAGS: arguments object
+
+    """
+    protein_data, smiles_data, kd_values = dataset_builder(FLAGS.data_path).transform_dataset(FLAGS.bpe_option[0],
+                                                                                              FLAGS.bpe_option[1],
+                                                                                              'Sequence',
+                                                                                              'SMILES',
+                                                                                              'Kd',
+                                                                                              FLAGS.protein_bpe_len,
+                                                                                              FLAGS.protein_len,
+                                                                                              FLAGS.smiles_bpe_len,
+                                                                                              FLAGS.smiles_len)
+
+    if FLAGS.bpe_option[0] == True:
+        protein_data = add_reg_token(protein_data, FLAGS.protein_dict_bpe_len)
+    else:
+        protein_data = add_reg_token(protein_data, FLAGS.protein_dict_len)
+
+    if FLAGS.bpe_option[1] == True:
+        smiles_data = add_reg_token(smiles_data, FLAGS.smiles_dict_bpe_len)
+    else:
+        smiles_data = add_reg_token(smiles_data, FLAGS.smiles_dict_len)
+
+        # kd_values = tf.expand_dims(kd_values,axis=1)
+
+    _, _, _, clusters, _, _, _, _ = dataset_builder(FLAGS.data_path).get_data()
+    
+    train_idx = pd.concat([i.iloc[:, 0] for t, i in clusters if t == 'train'])
+    test_idx = [i for t, i in clusters if t == 'test'][0].iloc[:, 0]
+
+    prot_train = tf.gather(protein_data, train_idx)
+    prot_test = tf.gather(protein_data, test_idx)
+
+    smiles_train = tf.gather(smiles_data, train_idx)
+    smiles_test = tf.gather(smiles_data, test_idx)
+
+    kd_train = tf.gather(kd_values, train_idx)
+    kd_test = tf.gather(kd_values, test_idx)
+
+    prot_train = convert_tf_tensor_to_pytorch(prot_train)
+    smiles_train = convert_tf_tensor_to_pytorch(smiles_train)
+    kd_train = convert_tf_tensor_to_pytorch(kd_train)
+    prot_test = convert_tf_tensor_to_pytorch(prot_test)
+    smiles_test = convert_tf_tensor_to_pytorch(smiles_test)
+    kd_test = convert_tf_tensor_to_pytorch(kd_test)
+
+    model = DTITR(FLAGS, FLAGS.prot_transformer_depth[0], FLAGS.smiles_transformer_depth[0],
+                                    FLAGS.cross_block_depth[0],
+                                    FLAGS.prot_transformer_heads[0], FLAGS.smiles_transformer_heads[0],
+                                    FLAGS.cross_block_heads[0],
+                                    FLAGS.prot_parameter_sharing[0], FLAGS.prot_dim_k[0],
+                                    FLAGS.prot_ff_dim[0], FLAGS.smiles_ff_dim[0], FLAGS.d_model[0],
+                                    FLAGS.dropout_rate[0], FLAGS.dense_atv_fun[0],
+                                    FLAGS.out_mlp_depth[0], FLAGS.out_mlp_hdim[0])
+
+    model.load_state_dict(torch.load(os.path.join(os.curdir, '../DTITR-ADMINBase50EPOCH-Pytorch.pth')))
+    model.eval()
+
+    print("----Evl-----")
+    test_loader = DataLoader(list(zip(prot_test, smiles_test, kd_test)), batch_size=FLAGS.batch_dim[0])
+
+
+    spear = 0
+    rmse = 0
+    ci_eval = 0
+    r2 = 0
+    batchNumber = len(test_loader)
+    with torch.no_grad():
+        for _, (prot_test_batch, smiles_test_batch, kd_test_batch) in enumerate(test_loader):
+            model_output = model(prot_test_batch, smiles_test_batch).squeeze(dim=1)
+            batch_spear = stats.spearmanr(model_output.clone().detach(), kd_test_batch.clone().detach()).statistic
+            batch_rmse = RMSELoss(model_output.clone().detach(), kd_test_batch.clone().detach())
+            batch_ci = c_index(model_output.clone().detach(), kd_test_batch.clone().detach())
+            batch_r2 = metrics.r2_score(kd_test_batch.clone().detach(), model_output.clone().detach())
+
+
+            spear += batch_spear
+            rmse += batch_rmse
+            ci_eval += batch_ci
+            r2 += batch_r2
+
+    print('Spearman:', spear / batchNumber)
+    print('RMSE:', rmse / batchNumber)
+    print('CI:', ci_eval / batchNumber)
+    print('R2:', r2 /batchNumber)
+
 
 
 
@@ -311,3 +407,5 @@ if __name__ == "__main__":
 
     if FLAGS.option == 'Train':
         run_train_model(FLAGS)
+    if FLAGS.option == 'Eval':
+        evaluate_model(FLAGS)
